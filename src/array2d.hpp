@@ -79,6 +79,7 @@ public:
     shape_type shape(void) const;
 
     value_type at(int p, int q) const;
+    value_type & at(int p, int q);
 
     std::slice row(size_type n) const;
     std::slice column(int n) const;
@@ -118,6 +119,25 @@ template<typename _Type>
 inline
 _Type
 array2d<_Type>::at(int p, int q) const
+{
+    if (p < 0)
+    {
+        assert(-p < m_shape.second);
+        p = m_shape.second + p;
+    }
+    if (q < 0)
+    {
+        assert(-q < m_shape.second);
+        q = m_shape.second + q;
+    }
+
+    return m_varray[p * m_shape.second + q];
+}
+
+template<typename _Type>
+inline
+_Type &
+array2d<_Type>::at(int p, int q)
 {
     if (p < 0)
     {
