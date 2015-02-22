@@ -43,6 +43,22 @@ namespace num
 
 typedef std::pair<size_type, size_type> shape_type;
 
+/**
+ *******************************************************************************
+ *   @brief 2d array
+ *******************************************************************************
+ *   @history @code
+ *   DATE         VERSION    WHO     DESCRIPTION
+ *   -----------  -------    ------  -----------
+ *   2015-01-30              wm      Class created.
+ *   2015-02-22              wm      @c column interface: size_type -> int
+ *   2015-02-22              wm      @c at method
+ *   @endcode
+ *******************************************************************************
+ *   2d clone of numpy's ndarray:
+ *   http://docs.scipy.org/doc/numpy/reference/arrays.ndarray.html
+ *******************************************************************************
+ */
 template<typename _Type>
 class array2d
 {
@@ -62,8 +78,10 @@ public:
 
     shape_type shape(void) const;
 
+    value_type at(int p, int q) const;
+
     std::slice row(size_type n) const;
-    std::slice column(size_type n) const;
+    std::slice column(int n) const;
     std::slice stripe(size_type n, enum Axis axis) const;
 
     std::gslice columns(int p, int q) const;
@@ -98,6 +116,25 @@ array2d<_Type>::shape(void) const
 
 template<typename _Type>
 inline
+_Type
+array2d<_Type>::at(int p, int q) const
+{
+    if (p < 0)
+    {
+        assert(-p < m_shape.second);
+        p = m_shape.second + p;
+    }
+    if (q < 0)
+    {
+        assert(-q < m_shape.second);
+        q = m_shape.second + q;
+    }
+
+    return m_varray[p * m_shape.second + q];
+}
+
+template<typename _Type>
+inline
 std::slice
 array2d<_Type>::row(size_type n) const
 {
@@ -107,8 +144,14 @@ array2d<_Type>::row(size_type n) const
 template<typename _Type>
 inline
 std::slice
-array2d<_Type>::column(size_type n) const
+array2d<_Type>::column(int n) const
 {
+    if (n < 0)
+    {
+        assert(-n < m_shape.second);
+        n = m_shape.second + n;
+    }
+
     return std::slice(n, m_shape.first, m_shape.second);
 }
 
@@ -198,7 +241,7 @@ ones(shape_type shape)
  *   @history @code
  *   DATE         VERSION    WHO     DESCRIPTION
  *   -----------  -------    ------  -----------
- *   2015-02-07              wm      Function created. TripSafetyFactors
+ *   2015-02-07              wm      Class created. TripSafetyFactors
  *   2015-02-22              wm      Index of -1 for converters means all cols
  *   2015-02-22              wm      use_cols accessor
  *   @endcode
@@ -275,6 +318,12 @@ struct loadtxtCfg
         return m_use_cols;
     }
 
+    loadtxtCfg & use_cols(const use_cols_type & _use_cols)
+    {
+        m_use_cols = _use_cols;
+        return *this;
+    }
+
     loadtxtCfg & use_cols(use_cols_type && _use_cols)
     {
         m_use_cols = std::move(_use_cols);
@@ -296,7 +345,7 @@ struct loadtxtCfg
  *   @history @code
  *   DATE         VERSION    WHO     DESCRIPTION
  *   -----------  -------    ------  -----------
- *   2015-02-07              wm      Function created. TripSafetyFactors
+ *   2015-02-07              wm      Class created. TripSafetyFactors
  *   2015-02-22              wm      Index of -1 for converters means all cols
  *   2015-02-22              wm      use_cols selector applied
  *   @endcode
