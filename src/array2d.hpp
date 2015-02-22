@@ -190,10 +190,24 @@ ones(shape_type shape)
     return array2d<_Type>(shape, 1.0);
 }
 
+/**
+ *******************************************************************************
+ *   @brief Configuration for @c loadtxt
+ *******************************************************************************
+ *   @history @code
+ *   DATE         VERSION    WHO     DESCRIPTION
+ *   -----------  -------    ------  -----------
+ *   2015-02-07              wm      Function created. TripSafetyFactors
+ *   2015-02-22              wm      Index of -1 for converters means all cols
+ *   2015-02-22              wm      use_cols accessor
+ *   @endcode
+ *******************************************************************************
+ */
 template<typename _Type = double>
 struct loadtxtCfg
 {
-    typedef std::map<size_type, _Type(*)(const char *)> converters_type;
+    typedef std::map<int, _Type(*)(const char *)> converters_type;
+    typedef std::unordered_set<size_type> use_cols_type;
 
     loadtxtCfg()
     :
@@ -255,7 +269,12 @@ struct loadtxtCfg
         return *this;
     }
 
-    loadtxtCfg & use_cols(std::unordered_set<size_type> && _use_cols)
+    const use_cols_type & use_cols(void) const
+    {
+        return m_use_cols;
+    }
+
+    loadtxtCfg & use_cols(use_cols_type && _use_cols)
     {
         m_use_cols = std::move(_use_cols);
         return *this;
@@ -266,9 +285,31 @@ struct loadtxtCfg
     converters_type m_converters;
     size_type m_skip_header;
     size_type m_skip_footer;
-    std::unordered_set<size_type> m_use_cols;
+    use_cols_type m_use_cols;
 };
 
+/**
+ *******************************************************************************
+ *   @brief Load data from a vector of strings.
+ *******************************************************************************
+ *   @history @code
+ *   DATE         VERSION    WHO     DESCRIPTION
+ *   -----------  -------    ------  -----------
+ *   2015-02-07              wm      Function created. TripSafetyFactors
+ *   2015-02-22              wm      Index of -1 for converters means all cols
+ *   2015-02-22              wm      use_cols selector applied
+ *   @endcode
+ *******************************************************************************
+ *   @param txt vector of strings to read from
+ *   @param cfg confguration of the processor
+ *******************************************************************************
+ *   @return 2d array created from passed vector of strings
+ *******************************************************************************
+ *   Implementation based on
+ *   http://docs.scipy.org/doc/numpy/reference/generated/numpy.loadtxt.html
+ *   interface.
+ *******************************************************************************
+ */
 template<typename _Type>
 array2d<_Type>
 loadtxt(
@@ -300,8 +341,10 @@ loadtxt(
         return zeros<value_type>(shape_type(0, 0));
     }
 
-    // TODO use_ncols
-    const size_type NCOLS = 1 + count_delimiters(txt.front(), cfg.delimiter());
+    const bool WIDESPAN_CONVERTER = cfg.converters().find(-1) != cfg.converters().cend();
+    const bool USE_COLS = cfg.use_cols().size() != 0;
+    const size_type NICOLS = 1 + count_delimiters(txt.front(), cfg.delimiter()); // TODO
+    const size_type NCOLS = USE_COLS ? cfg.use_cols().size() : NICOLS;
 
     array2d<_Type> result = zeros<value_type>(shape_type(NROWS, NCOLS));
 
@@ -310,26 +353,38 @@ loadtxt(
         std::valarray<value_type> row(NROWS);
         std::stringstream ss(txt[ridx + cfg.skip_header()]);
         std::string item;
+        size_type ocidx{0};
 
-        for (size_type cidx{0}; cidx < NCOLS && std::getline(ss, item, cfg.delimiter()); ++cidx) // TODO
+        for (size_type icidx{0}; icidx < NICOLS && std::getline(ss, item, cfg.delimiter()); ++icidx) // TODO
         {
-            if (cfg.converters().find(cidx) != cfg.converters().cend())
+            if (USE_COLS && (cfg.use_cols().find(icidx) == cfg.use_cols().cend()))
             {
-                row[cidx] = cfg.converters().at(cidx)(item.c_str());
+                continue;
+            }
+
+            if (WIDESPAN_CONVERTER)
+            {
+                row[ocidx] = cfg.converters().at(-1)(item.c_str());
+            }
+            else if (cfg.converters().find(icidx) != cfg.converters().cend())
+            {
+                row[ocidx] = cfg.converters().at(icidx)(item.c_str());
             }
             else if (std::is_convertible<value_type, long double>::value)
             {
-                row[cidx] = std::strtold(item.c_str(), nullptr);
+                row[ocidx] = std::strtold(item.c_str(), nullptr);
             }
             else if (std::is_convertible<value_type, long long>::value)
             {
-                row[cidx] = std::atoll(item.c_str());
+                row[ocidx] = std::atoll(item.c_str());
             }
             else
             {
                 std::stringstream item_ss(item);
-                item_ss >> row[cidx];
+                item_ss >> row[ocidx];
             }
+
+            ++ocidx;
         }
 
         result[result.row(ridx)] = row;
