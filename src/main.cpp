@@ -174,7 +174,7 @@ int main(int argc, char **argv)
 
     std::vector<double> prediction1 = worker.predict(
         ChildStuntedness5::TestType::Example,
-        ChildStuntedness5::ScenarioType::S1,
+        ScenarioType::S1,
         train_data0,
         test_data0);
     assert(prediction1.size() == test_iqs.size());
@@ -188,7 +188,7 @@ int main(int argc, char **argv)
 
     std::vector<double> prediction2 = worker.predict(
         ChildStuntedness5::TestType::Example,
-        ChildStuntedness5::ScenarioType::S2,
+        ScenarioType::S2,
         std::vector<std::string>{train_data},
         std::vector<std::string>{test_data});
     assert(prediction2.size() == test_iqs.size());
@@ -202,7 +202,7 @@ int main(int argc, char **argv)
 
     std::vector<double> prediction3 = worker.predict(
         ChildStuntedness5::TestType::Example,
-        ChildStuntedness5::ScenarioType::S3,
+        ScenarioType::S3,
         train_data,
         test_data);
     assert(prediction3.size() == test_iqs.size());
