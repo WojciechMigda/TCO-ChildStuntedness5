@@ -22,6 +22,7 @@
  ******************************************************************************/
 
 #include "ChildStuntedness5.hpp"
+#include "extract_subject_ranges.hpp"
 #include "num.hpp"
 
 #include <fstream>
@@ -51,36 +52,6 @@ read_file(std::string && fname)
     fcsv.close();
 
     return vcsv;
-}
-
-std::vector<std::pair<num::size_type, num::size_type>>
-extract_subject_ranges(std::vector<std::string> && vstr)
-{
-    assert(vstr.size() > 1);
-
-    std::vector<std::pair<num::size_type, num::size_type>> result;
-
-    num::size_type first{0};
-    int curr_id = std::atoi(vstr[first].c_str());
-
-    for (num::size_type idx{1}; idx < vstr.size(); ++idx)
-    {
-        const int id = std::atoi(vstr[idx].c_str());
-
-        if (id != curr_id)
-        {
-            result.emplace_back(first, idx - 1);
-            first = idx;
-            curr_id = id;
-        }
-        else
-        {
-            ;
-        }
-    }
-    result.emplace_back(first, vstr.size() - 1);
-
-    return result;
 }
 
 int main(int argc, char **argv)
@@ -215,33 +186,33 @@ int main(int argc, char **argv)
         std::plus<double>(),
         sse_lambda);
 
-//    std::vector<double> prediction2 = worker.predict(
-//        ChildStuntedness5::TestType::Example,
-//        ChildStuntedness5::ScenarioType::S2,
-//        train_data,
-//        test_data);
-//    assert(prediction2.size() == test_iqs.size());
-//    const double SSE2 = std::inner_product(
-//        prediction2.cbegin(),
-//        prediction2.cend(),
-//        test_iqs.cbegin(),
-//        0.0,
-//        std::plus<double>(),
-//        sse_lambda);
-//
-//    std::vector<double> prediction3 = worker.predict(
-//        ChildStuntedness5::TestType::Example,
-//        ChildStuntedness5::ScenarioType::S3,
-//        train_data,
-//        test_data);
-//    assert(prediction3.size() == test_iqs.size());
-//    const double SSE3 = std::inner_product(
-//        prediction3.cbegin(),
-//        prediction3.cend(),
-//        test_iqs.cbegin(),
-//        0.0,
-//        std::plus<double>(),
-//        sse_lambda);
+    std::vector<double> prediction2 = worker.predict(
+        ChildStuntedness5::TestType::Example,
+        ChildStuntedness5::ScenarioType::S2,
+        std::vector<std::string>{train_data},
+        std::vector<std::string>{test_data});
+    assert(prediction2.size() == test_iqs.size());
+    const double SSE2 = std::inner_product(
+        prediction2.cbegin(),
+        prediction2.cend(),
+        test_iqs.cbegin(),
+        0.0,
+        std::plus<double>(),
+        sse_lambda);
+
+    std::vector<double> prediction3 = worker.predict(
+        ChildStuntedness5::TestType::Example,
+        ChildStuntedness5::ScenarioType::S3,
+        train_data,
+        test_data);
+    assert(prediction3.size() == test_iqs.size());
+    const double SSE3 = std::inner_product(
+        prediction3.cbegin(),
+        prediction3.cend(),
+        test_iqs.cbegin(),
+        0.0,
+        std::plus<double>(),
+        sse_lambda);
 
     auto score_lambda = [](const double SSE, const double SSE0) -> double
     {
@@ -249,8 +220,8 @@ int main(int argc, char **argv)
     };
 
     std::cerr << "Score 1: " << score_lambda(SSE1, SSE0) << std::endl;
-//    std::cerr << "Score 2: " << score_lambda(SSE2, SSE0) << std::endl;
-//    std::cerr << "Score 3: " << score_lambda(SSE3, SSE0) << std::endl;
+    std::cerr << "Score 2: " << score_lambda(SSE2, SSE0) << std::endl;
+    std::cerr << "Score 3: " << score_lambda(SSE3, SSE0) << std::endl;
 
     return 0;
 }
