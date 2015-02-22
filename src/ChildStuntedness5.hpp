@@ -27,6 +27,7 @@
 #include "array2d.hpp"
 #include "extract_subject_ranges.hpp"
 
+#include <random>
 #include <iterator>
 #include <valarray>
 #include <vector>
@@ -42,6 +43,115 @@ enum ScenarioType
 };
 
 typedef double real_type;
+
+std::vector<double> do_lin_reg(
+    const num::array2d<real_type> & i_X_train,
+    const std::valarray<real_type> & i_y_train,
+    const num::array2d<real_type> & i_X_test
+)
+{
+    typedef num::array2d<real_type> array_type;
+    typedef std::valarray<real_type> vector_type;
+
+    // I'll be adding the intercept column
+    const num::size_type NUM_FEAT{i_X_train.shape().second + 1};
+
+    // let's map input training features onto what we'll work with
+    // first column will be 1s for the intercept
+    array_type X_train = num::ones<real_type>({i_X_train.shape().first, NUM_FEAT});
+
+    // the rest will be copied from i_X_train
+    // X_train[:, 1:] = i_X_train[:, :]
+    X_train[X_train.columns(1, -1)] = i_X_train[i_X_train.columns(0, -1)];
+
+    // same with test features
+    array_type X_test = num::ones<real_type>({i_X_test.shape().first, NUM_FEAT});
+
+    // X_test[:, 1:] = i_X_test[:, :]
+    X_test[X_test.columns(1, -1)] = i_X_test[i_X_test.columns(0, -1)];
+
+    vector_type y_train = i_y_train;
+    vector_type theta(0.0, X_train.shape().second);
+
+    // standardization
+    for (num::size_type c{1}; c < X_train.shape().second; ++c)
+    {
+        const vector_type & col = X_train[X_train.column(c)];
+        const vector_type & colt = X_test[X_test.column(c)];
+
+        const real_type mu = num::mean<real_type>(col);
+        const real_type dev = num::std<real_type>(col);
+
+        X_train[X_train.column(c)] = col - mu;
+        X_train[X_train.column(c)] = col / dev;
+
+        X_test[X_test.column(c)] = colt - mu;
+        X_test[X_test.column(c)] = colt / dev;
+    }
+
+    std::vector<double> result(i_X_test.shape().first);
+
+    return result;
+}
+
+std::pair<num::array2d<real_type>, num::array2d<real_type>>
+repair_X_data(
+    const num::array2d<real_type> & tr_array,
+    const num::array2d<real_type> & ts_array
+)
+{
+    assert(tr_array.shape().second == ts_array.shape().second);
+
+    typedef std::valarray<real_type> vector_type;
+    typedef num::array2d<real_type> array_type;
+
+    array_type tr_result = tr_array;
+    array_type ts_result = ts_array;
+
+    std::random_device rd;
+    std::mt19937 g(rd());
+
+    auto draw_element = [&g](const vector_type & vec) -> real_type
+    {
+        std::uniform_int_distribution<num::size_type> dist{0, vec.size()};
+
+        real_type drawn;
+
+        do
+        {
+            drawn = vec[dist(g)];
+        } while (std::isnan(drawn));
+
+        return drawn;
+    };
+
+    for (num::size_type cidx{0}; cidx < tr_result.shape().second; ++cidx)
+    {
+        vector_type column(tr_result.shape().first + ts_result.shape().first);
+
+        column[std::slice(0, tr_result.shape().first, 1)] = tr_result[tr_result.column(cidx)];
+        column[std::slice(tr_result.shape().first, ts_result.shape().first, 1)] = ts_result[ts_result.column(cidx)];
+
+        for (num::size_type ridx{0}; ridx < tr_result.shape().first; ++ridx)
+        {
+            real_type & element = tr_result.at(ridx, cidx);
+            if (std::isnan(element))
+            {
+                element = draw_element(column);
+            }
+        }
+        for (num::size_type ridx{0}; ridx < ts_result.shape().first; ++ridx)
+        {
+            real_type & element = ts_result.at(ridx, cidx);
+            if (std::isnan(element))
+            {
+                element = draw_element(column);
+            }
+        }
+    }
+
+    return std::make_pair(tr_result, ts_result);
+}
 
 std::valarray<real_type>
 flatten_y_data(
@@ -64,7 +174,7 @@ flatten_y_data(
 }
 
 num::array2d<real_type>
-flatten_X_tr_data(
+flatten_X_data(
     enum ScenarioType scenario,
     const num::array2d<real_type> & array,
     const std::vector<std::pair<num::size_type, num::size_type>> & subject_ranges
@@ -83,7 +193,7 @@ flatten_X_tr_data(
         {2, 3, 5} // age: 2558
     };
 
-    const std::valarray<num::size_type> s3_selector[] = // TODO
+    const std::valarray<num::size_type> s3_selector[] =
     {
         // these are column indices among those already selected from the full set
         {2, 4, 5, 6, 7, 8, 9, 10, 11, 12, 13, 16, 17, 18, 19, 20, 21, 22, 23, 24, 25, 26}, // age: 1
@@ -98,7 +208,7 @@ flatten_X_tr_data(
     switch (scenario)
     {
         case ScenarioType::S1:
-            shape = {subject_ranges.size(), array.shape().second - 1};
+            shape = {subject_ranges.size(), 6};
             break;
 
         case ScenarioType::S2:
@@ -117,7 +227,7 @@ flatten_X_tr_data(
                 };
             break;
 
-        case ScenarioType::S3: // TODO
+        case ScenarioType::S3:
             shape =
                 {
                     subject_ranges.size(),
@@ -185,7 +295,7 @@ flatten_X_tr_data(
     13 1462 16.7     102    nan     16.0515 0.16    -0.32   0.56    0.55    1 40 3147 49 nan 7 nan
     13 2558 24.7     124    nan     16.064  nan     nan     nan     nan     1 40 3147 49 nan 7 85
 ////////////////////////////////////////////////////////////////////////////////
-    const std::valarray<num::size_type> s3_selector[] = // TODO
+    const std::valarray<num::size_type> s3_selector[] =
     {
         // these are column indices among those already selected from the full set
         {2, 4, 5, 6, 7, 8, 9, 10, 11, 12, 13, 16, 17, 18, 19, 20, 21, 22, 23, 24, 25, 26}, // age: 1
@@ -232,7 +342,7 @@ flatten_X_tr_data(
     switch (scenario)
     {
         case ScenarioType::S1:
-            result[result.columns(0, -1)] = array[array.columns(1, -1)];
+            result[result.columns(0, -1)] = array[array.columns(1, 6)];
             break;
 
         case ScenarioType::S2:
@@ -286,7 +396,7 @@ flatten_X_tr_data(
             }
             break;
 
-        case ScenarioType::S3: // TODO
+        case ScenarioType::S3:
             for (num::size_type ridx{0}; ridx < subject_ranges.size(); ++ridx)
             {
                 const vector_type ages = array[std::gslice(
@@ -349,12 +459,6 @@ struct ChildStuntedness5
         Provisional,
         System
     };
-//    enum ScenarioType
-//    {
-//        S1,
-//        S2,
-//        S3
-//    };
 
     std::vector<double>
     predict(
@@ -428,8 +532,6 @@ ChildStuntedness5::predict(
         extract_subject_ranges(std::vector<std::string>{i_training});
     const std::vector<std::pair<num::size_type, num::size_type>> ts_subject_ranges =
         extract_subject_ranges(std::vector<std::string>{i_testing});
-
-    std::vector<double> result(ts_subject_ranges.size());
 
     auto na_xlt = [](const char * str) -> real_type
     {
@@ -529,8 +631,18 @@ ChildStuntedness5::predict(
 //    }
 
     const vector_type y_tr_data = flatten_y_data(i_train_data, tr_subject_ranges);
-    const array_type X_tr_data = flatten_X_tr_data(static_cast<enum ScenarioType>(scenario), i_train_data, tr_subject_ranges);
-//    const array_type X_ts_data = flatten_X_ts_data(static_cast<enum ScenarioType>(scenario), i_test_data, ts_subject_ranges);
+    const enum ScenarioType enumerated_scenario = static_cast<enum ScenarioType>(scenario);
+
+    array_type X_tr_data = flatten_X_data(enumerated_scenario, i_train_data, tr_subject_ranges);
+    array_type X_ts_data = flatten_X_data(enumerated_scenario, i_test_data, ts_subject_ranges);
+
+//    X_tr_data = repair_X_data(X_tr_data);
+//    X_ts_data = repair_X_data(X_ts_data);
+    auto X_tr_ts_data = repair_X_data(X_tr_data, X_ts_data);
+    array_type complete_X_tr_data = std::move(X_tr_ts_data.first);
+    array_type complete_X_ts_data = std::move(X_tr_ts_data.second);
+
+    std::vector<double> result = do_lin_reg(complete_X_tr_data, y_tr_data, complete_X_ts_data);
 
     return result;
 }
