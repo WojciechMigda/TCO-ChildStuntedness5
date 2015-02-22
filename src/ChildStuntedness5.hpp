@@ -26,6 +26,7 @@
 
 #include "array2d.hpp"
 #include "extract_subject_ranges.hpp"
+#include "linreg.hpp"
 
 #include <random>
 #include <iterator>
@@ -88,6 +89,14 @@ std::vector<double> do_lin_reg(
         X_test[X_test.column(c)] = colt - mu;
         X_test[X_test.column(c)] = colt / dev;
     }
+
+    num::LinearRegression<real_type> linRegClassifier(
+        num::LinearRegression<real_type>::array_type{X_train},
+        num::LinearRegression<real_type>::vector_type{y_train},
+        num::LinearRegression<real_type>::vector_type{theta},
+        0.02,
+        200
+    );
 
     std::vector<double> result(i_X_test.shape().first);
 
