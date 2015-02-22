@@ -33,11 +33,13 @@
 #include <random>
 #include <algorithm>
 #include <cassert>
-#include <valarray>
 #include <iterator>
 #include <utility>
+#include <cstring>
+#include <functional>
 
-std::vector<std::string> read_file(std::string && fname)
+std::vector<std::string>
+read_file(std::string && fname)
 {
     std::ifstream fcsv(fname);
     std::vector<std::string> vcsv;
@@ -101,24 +103,154 @@ int main(int argc, char **argv)
     const std::size_t PIVOT = 0.67 * subject_ranges.size();
 
     std::vector<std::string> train_data;
+    std::vector<std::string> train_data0;
     for (auto it = subject_ranges.cbegin(); it != subject_ranges.cbegin() + PIVOT; ++it)
     {
         train_data.insert(train_data.end(), vcsv.cbegin() + it->first, vcsv.cbegin() + it->second + 1);
+        train_data0.push_back(vcsv[it->second]);
     }
 
     std::vector<std::string> test_data;
+    std::vector<std::string> test_data0;
     for (auto it = subject_ranges.cbegin() + PIVOT; it != subject_ranges.cend(); ++it)
     {
         test_data.insert(test_data.end(), vcsv.cbegin() + it->first, vcsv.cbegin() + it->second + 1);
+        test_data0.push_back(vcsv[it->second]);
     }
 
-    std::cerr << "Train data has " << train_data.size() << " elements" << std::endl;
-    std::cerr << "Test data has " << test_data.size() << " elements" << std::endl;
+    std::cerr << "Train data has " << PIVOT << " IDs" << std::endl;
+    std::cerr << "Train data has " << train_data.size() << " rows" << std::endl;
+    std::cerr << "Train data 0 has " << train_data0.size() << " rows" << std::endl;
+    std::cerr << "Test data has " << subject_ranges.size() - PIVOT << " IDs" << std::endl;
+    std::cerr << "Test data has " << test_data.size() << " rows" << std::endl;
+    std::cerr << "Test data 0 has " << test_data0.size() << " rows" << std::endl;
+
+    assert(train_data.size() + test_data.size() == vcsv.size());
+    assert(train_data0.size() + test_data0.size() == subject_ranges.size());
+
+    for (auto item : test_data)
+    {
+        constexpr num::size_type IQ_COL{26};
+
+        std::size_t nth_comma{0};
+
+        item.resize(std::distance(item.cbegin(), std::find_if(item.cbegin(), item.cend(),
+            [&nth_comma](const char & ch)
+            {
+                if (ch == ',' && nth_comma == (IQ_COL - 1))
+                {
+                    return true;
+                }
+                else
+                {
+                    nth_comma += (ch == ',');
+                    return false;
+                }
+            }
+        )));
+        assert(std::count(item.cbegin(), item.cend(), ',') == (IQ_COL - 1));
+    }
+
+    std::vector<double> test_iqs;
+
+    for (auto item : test_data0)
+    {
+        constexpr num::size_type IQ_COL{26};
+
+        std::size_t nth_comma{0};
+
+        test_iqs.push_back(std::atoi(std::strrchr(item.c_str(), ',') + 1));
+
+        item.resize(std::distance(item.cbegin(), std::find_if(item.cbegin(), item.cend(),
+            [&nth_comma](const char & ch)
+            {
+                if (ch == ',' && nth_comma == (IQ_COL - 1))
+                {
+                    return true;
+                }
+                else
+                {
+                    nth_comma += (ch == ',');
+                    return false;
+                }
+            }
+        )));
+        assert(std::count(item.cbegin(), item.cend(), ',') == (IQ_COL - 1));
+    }
+
+    const double MEAN_TRAIN_IQ = std::accumulate(train_data0.cbegin(), train_data0.cend(), 0.0,
+        [](const double & sum, const std::string & item) -> double
+        {
+            return sum + std::atoi(std::strrchr(item.c_str(), ',') + 1);
+        }
+    ) / PIVOT;
+
+    const double SSE0 = std::accumulate(test_iqs.cbegin(), test_iqs.cend(), 0.0,
+        [&MEAN_TRAIN_IQ](const double & sse, const double & iq) -> double
+        {
+            return sse + (iq - MEAN_TRAIN_IQ) * (iq - MEAN_TRAIN_IQ);
+        }
+    );
 
     ////////////////////////////////////////////////////////////////////////////
+
     const ChildStuntedness5 worker;
-    std::vector<double> prediction = worker.predict(0, 0, train_data, test_data);
-    ////////////////////////////////////////////////////////////////////////////
+
+    auto sse_lambda = [](const double & lhs, const double & rhs) -> double
+    {
+        return (lhs - rhs) * (lhs - rhs);
+    };
+
+    std::vector<double> prediction1 = worker.predict(
+        ChildStuntedness5::TestType::Example,
+        ChildStuntedness5::ScenarioType::S1,
+        train_data0,
+        test_data0);
+    assert(prediction1.size() == test_iqs.size());
+    const double SSE1 = std::inner_product(
+        prediction1.cbegin(),
+        prediction1.cend(),
+        test_iqs.cbegin(),
+        0.0,
+        std::plus<double>(),
+        sse_lambda);
+
+//    std::vector<double> prediction2 = worker.predict(
+//        ChildStuntedness5::TestType::Example,
+//        ChildStuntedness5::ScenarioType::S2,
+//        train_data,
+//        test_data);
+//    assert(prediction2.size() == test_iqs.size());
+//    const double SSE2 = std::inner_product(
+//        prediction2.cbegin(),
+//        prediction2.cend(),
+//        test_iqs.cbegin(),
+//        0.0,
+//        std::plus<double>(),
+//        sse_lambda);
+//
+//    std::vector<double> prediction3 = worker.predict(
+//        ChildStuntedness5::TestType::Example,
+//        ChildStuntedness5::ScenarioType::S3,
+//        train_data,
+//        test_data);
+//    assert(prediction3.size() == test_iqs.size());
+//    const double SSE3 = std::inner_product(
+//        prediction3.cbegin(),
+//        prediction3.cend(),
+//        test_iqs.cbegin(),
+//        0.0,
+//        std::plus<double>(),
+//        sse_lambda);
+
+    auto score_lambda = [](const double SSE, const double SSE0) -> double
+    {
+        return 1e6 * std::max(0.0, 1.0 - SSE / SSE0);
+    };
+
+    std::cerr << "Score 1: " << score_lambda(SSE1, SSE0) << std::endl;
+//    std::cerr << "Score 2: " << score_lambda(SSE2, SSE0) << std::endl;
+//    std::cerr << "Score 3: " << score_lambda(SSE3, SSE0) << std::endl;
 
     return 0;
 }

@@ -31,6 +31,19 @@ typedef double real_type;
 
 struct ChildStuntedness5
 {
+    enum TestType
+    {
+        Example,
+        Provisional,
+        System
+    };
+    enum ScenarioType
+    {
+        S1,
+        S2,
+        S3
+    };
+
     std::vector<double>
     predict(
         int testType,
@@ -46,7 +59,7 @@ ChildStuntedness5::predict(
     std::vector<std::string> & training,
     std::vector<std::string> & testing) const
 {
-    std::vector<double> result;
+    std::vector<double> result(testing.size());
 
     return result;
 }
