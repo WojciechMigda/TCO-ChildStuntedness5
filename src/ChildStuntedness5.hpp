@@ -35,6 +35,8 @@
 #include <string>
 #include <cmath>
 #include <cstring>
+#include <map>
+#include <ctime>
 
 enum ScenarioType
 {
@@ -45,7 +47,33 @@ enum ScenarioType
 
 typedef double real_type;
 
-std::vector<double> do_lin_reg(
+std::map<real_type, real_type>
+map_y_density(
+    const std::valarray<real_type> & feat,
+    const std::valarray<real_type> & y
+)
+{
+    std::map<real_type, std::pair<num::size_type, num::size_type>> event_count;
+
+    assert(feat.size() == y.size());
+
+    for (num::size_type r{0}; r < feat.size(); ++r)
+    {
+        event_count[feat[r]].first++;
+        event_count[feat[r]].second += y[r];
+    }
+
+    std::map<real_type, real_type> result;
+
+    for (auto count : event_count)
+    {
+        result[count.first] = (real_type)count.second.second / count.second.first;
+    }
+
+    return result;
+}
+
+std::valarray<real_type> do_lin_reg(
     const real_type C,
     const num::array2d<real_type> & i_X_train,
     const std::valarray<real_type> & i_y_train,
@@ -103,15 +131,13 @@ std::vector<double> do_lin_reg(
 
     auto pred = linRegClassifier.predict(X_test, fit_theta);
 
-    std::cerr << "y.min() " << y_train.min() << std::endl;
-    std::cerr << "y.max() " << y_train.max() << std::endl;
-    std::cerr << "pred.min() " << pred.min() << std::endl;
-    std::cerr << "pred.max() " << pred.max() << std::endl;
+//    std::cerr << "pred.min() " << pred.min() << std::endl;
+//    std::cerr << "pred.max() " << pred.max() << std::endl;
 
-    std::vector<double> result(std::begin(pred), std::end(pred));
-    assert(result.size() == i_X_test.shape().first);
+//    std::vector<double> result(std::begin(pred), std::end(pred));
+//    assert(result.size() == i_X_test.shape().first);
 
-    return result;
+    return pred;
 }
 
 std::pair<num::array2d<real_type>, num::array2d<real_type>>
@@ -545,6 +571,8 @@ ChildStuntedness5::predict(
         geniq
     };
 
+    std::cerr << "Test: " << testType << " , Scenario: " << scenario << std::endl;
+
     typedef num::array2d<real_type> array_type;
     typedef std::valarray<real_type> vector_type;
 
@@ -656,21 +684,32 @@ ChildStuntedness5::predict(
     array_type X_tr_data = flatten_X_data(enumerated_scenario, i_train_data, tr_subject_ranges);
     array_type X_ts_data = flatten_X_data(enumerated_scenario, i_test_data, ts_subject_ranges);
 
-//    X_tr_data = repair_X_data(X_tr_data);
-//    X_ts_data = repair_X_data(X_ts_data);
-    auto X_tr_ts_data = repair_X_data(X_tr_data, X_ts_data);
-    array_type complete_X_tr_data = std::move(X_tr_ts_data.first);
-    array_type complete_X_ts_data = std::move(X_tr_ts_data.second);
+//    auto X_tr_ts_data = repair_X_data(X_tr_data, X_ts_data);
+//    array_type complete_X_tr_data = std::move(X_tr_ts_data.first);
+//    array_type complete_X_ts_data = std::move(X_tr_ts_data.second);
 
     const real_type C[] = {1.0, 1.0, 1.0};
+    const num::size_type NREP[3][3] = {{128, 48, 32}, {96, 32, 24}, {64, 24, 16}};
 
-    std::vector<double> result = do_lin_reg(
-        C[scenario],
-        complete_X_tr_data,
-        y_tr_data,
-        complete_X_ts_data);
+    vector_type pred(X_ts_data.shape().first);
 
-    return result;
+    for (num::size_type cnt{}; cnt < NREP[testType][scenario]; ++cnt)
+    {
+        auto X_tr_ts_data = repair_X_data(X_tr_data, X_ts_data);
+        array_type complete_X_tr_data = std::move(X_tr_ts_data.first);
+        array_type complete_X_ts_data = std::move(X_tr_ts_data.second);
+
+        pred += do_lin_reg(
+            C[scenario],
+            complete_X_tr_data,
+            y_tr_data,
+            complete_X_ts_data);
+        std::cerr << ".";
+    }
+    std::cerr << std::endl;
+    pred /= NREP[testType][scenario];
+
+    return std::vector<double>(std::begin(pred), std::end(pred));
 }
 
 #endif /* CHILDSTUNTEDNESS5_HPP_ */
