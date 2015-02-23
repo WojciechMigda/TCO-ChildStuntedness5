@@ -60,35 +60,32 @@ linreg_cost_grad(
 
     assert(tcol.size() >= X_shape.first);
 
-//    vector & H = tcol;
-//
-//    //    H = sigmoid(theta' * X')';
-//    for (size_type r{0}; r < X_shape.first; ++r)
-//    {
-//        H[r] = (X[X.row(r)] * theta).sum();
-//    }
-//    H = sigmoid(H);
-//
-//    //    theta_for_reg = [0; theta(2:size(theta))];
-//
-//    //    grad = theta_for_reg' / C;
-//    out_grad = theta / C;
-//    out_grad[0] = 0.0;
-//
-//    //    sigma_i = -y' * log(H) - (1 - y') * log(1 - H);
-//    const value_type Sigma = -(y * std::log(H)).sum() - (((value_type)1.0 - y) * std::log((value_type)1.0 - H)).sum();
-//    //    J = sigma_i / m + sum(theta_for_reg.^2) / (2 * C * m);
-//    out_cost = (theta[std::slice(1, X_shape.second - 1, 1)] * theta[std::slice(1, X_shape.second - 1, 1)]).sum() / (2.0 * C * X_shape.first);
-//    out_cost += Sigma / X_shape.first;
-//
-//    //    grad += (H - y)' * X;
-//    H -= y;
-//    for (size_type r{0}; r < X_shape.second; ++r)
-//    {
-//        out_grad[r] += (X[X.column(r)] * H).sum();
-//    }
-//    //    grad /= m;
-//    out_grad /= X_shape.first;
+    vector & H = tcol;
+
+    //    H = (theta' * X')' - y;
+    for (size_type r{0}; r < X_shape.first; ++r)
+    {
+        H[r] = (X[X.row(r)] * theta).sum();
+    }
+    H -= y;
+
+    //  sigma_i = sum(H .* H);
+    const value_type Sigma = (H * H).sum();
+
+    //  J = (sigma_i + sum(theta_for_reg .* theta_for_reg) / C) / (2 * m);
+    out_cost = (Sigma + (theta[std::slice(1, X_shape.second - 1, 1)] * theta[std::slice(1, X_shape.second - 1, 1)]).sum() / C) / (2.0 * X_shape.first);
+
+    //  theta_for_reg = [0; theta(2:end)];
+    //  grad = theta_for_reg' / C;
+    out_grad = theta / C;
+    out_grad[0] = 0.0;
+    //  grad += (H)' * X;
+    for (size_type r{0}; r < X_shape.second; ++r)
+    {
+        out_grad[r] += (X[X.column(r)] * H).sum();
+    }
+    //  grad /= m;
+    out_grad /= X_shape.first;
 }
 
 template<typename _ValueType>
@@ -109,7 +106,7 @@ linreg_cost_grad(
     const double cost;
     const vector grad(X_shape.first);
 
-    logreg_cost_grad(cost, grad, temp, theta, X, y, C);
+    linreg_cost_grad(cost, grad, temp, theta, X, y, C);
 
     return std::make_pair(cost, grad);
 }
@@ -134,10 +131,10 @@ public:
     fit(void) const;
 
     vector_type
-    predict(const array_type & X, const vector_type & theta, bool round = true) const;
+    predict(const array_type & X, const vector_type & theta) const;
 
     vector_type
-    predict(array_type && X, vector_type && theta, bool round = true) const;
+    predict(array_type && X, vector_type && theta) const;
 
 private:
     const array_type m_X;
@@ -183,9 +180,32 @@ LinearRegression<_ValueType>::fit(void) const
         return std::make_pair(cost, grad);
     };
 
-    const vector_type theta = num::fmincg(cost_fn, m_theta0, m_max_iter, false);
+    const vector_type theta = num::fmincg(cost_fn, m_theta0, m_max_iter, true);
 
     return theta;
+}
+
+template<typename _ValueType>
+typename LinearRegression<_ValueType>::vector_type
+LinearRegression<_ValueType>::predict(const array_type & X, const vector_type & theta) const
+{
+    assert(theta.size() == X.shape().second);
+
+    vector_type H(X.shape().first);
+
+    for (size_type r{0}; r < X.shape().first; ++r)
+    {
+        H[r] = (X[X.row(r)] * theta).sum();
+    }
+
+    return H;
+}
+
+template<typename _ValueType>
+typename LinearRegression<_ValueType>::vector_type
+LinearRegression<_ValueType>::predict(array_type && X, vector_type && theta) const
+{
+    return predict(X, theta);
 }
 
 } // namespace num

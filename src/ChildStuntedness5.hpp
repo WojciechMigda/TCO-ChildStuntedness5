@@ -94,11 +94,21 @@ std::vector<double> do_lin_reg(
         num::LinearRegression<real_type>::array_type{X_train},
         num::LinearRegression<real_type>::vector_type{y_train},
         num::LinearRegression<real_type>::vector_type{theta},
-        0.02,
-        200
+        1,
+        150
     );
 
-    std::vector<double> result(i_X_test.shape().first);
+    auto fit_theta = linRegClassifier.fit();
+
+    auto pred = linRegClassifier.predict(X_test, fit_theta);
+
+    std::cerr << "y.min() " << y_train.min() << std::endl;
+    std::cerr << "y.max() " << y_train.max() << std::endl;
+    std::cerr << "pred.min() " << pred.min() << std::endl;
+    std::cerr << "pred.max() " << pred.max() << std::endl;
+
+    std::vector<double> result(std::begin(pred), std::end(pred));
+    assert(result.size() == i_X_test.shape().first);
 
     return result;
 }
@@ -205,7 +215,7 @@ flatten_X_data(
     const std::valarray<num::size_type> s3_selector[] =
     {
         // these are column indices among those already selected from the full set
-        {2, 4, 5, 6, 7, 8, 9, 10, 11, 12, 13, 16, 17, 18, 19, 20, 21, 22, 23, 24, 25, 26}, // age: 1
+        {2, 4, 5, 6, 7, 8, 9, 10, 11, 12, 13, 16, 17, 18, 19, 20, 21, 22, 23, 24, 25}, // age: 1
         {2, 6}, // age: 123
         {2, 4, 5, 6, 7, 8, 9}, // age: 366
         {2, 3, 5, 6, 7, 8, 9}, // age: 1462
@@ -307,7 +317,7 @@ flatten_X_data(
     const std::valarray<num::size_type> s3_selector[] =
     {
         // these are column indices among those already selected from the full set
-        {2, 4, 5, 6, 7, 8, 9, 10, 11, 12, 13, 16, 17, 18, 19, 20, 21, 22, 23, 24, 25, 26}, // age: 1
+        {2, 4, 5, 6, 7, 8, 9, 10, 11, 12, 13, 16, 17, 18, 19, 20, 21, 22, 23, 24, 25}, // age: 1
         {2, 6}, // age: 123
         {2, 4, 5, 6, 7, 8, 9}, // age: 366
         {2, 3, 5, 6, 7, 8, 9}, // age: 1462
