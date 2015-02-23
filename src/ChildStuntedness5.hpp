@@ -46,6 +46,7 @@ enum ScenarioType
 typedef double real_type;
 
 std::vector<double> do_lin_reg(
+    const real_type C,
     const num::array2d<real_type> & i_X_train,
     const std::valarray<real_type> & i_y_train,
     const num::array2d<real_type> & i_X_test
@@ -94,7 +95,7 @@ std::vector<double> do_lin_reg(
         num::LinearRegression<real_type>::array_type{X_train},
         num::LinearRegression<real_type>::vector_type{y_train},
         num::LinearRegression<real_type>::vector_type{theta},
-        1,
+        C,
         150
     );
 
@@ -661,7 +662,13 @@ ChildStuntedness5::predict(
     array_type complete_X_tr_data = std::move(X_tr_ts_data.first);
     array_type complete_X_ts_data = std::move(X_tr_ts_data.second);
 
-    std::vector<double> result = do_lin_reg(complete_X_tr_data, y_tr_data, complete_X_ts_data);
+    const real_type C[] = {1.0, 1.0, 1.0};
+
+    std::vector<double> result = do_lin_reg(
+        C[scenario],
+        complete_X_tr_data,
+        y_tr_data,
+        complete_X_ts_data);
 
     return result;
 }
