@@ -69,6 +69,9 @@
 #ifndef FMINCG_HPP_
 #define FMINCG_HPP_
 
+#pragma GCC optimize ( "-ffast-math" )
+#pragma GCC optimize ( "-fno-finite-math-only" )
+
 #include <utility>
 #include <valarray>
 #include <cmath>

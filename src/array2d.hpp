@@ -38,6 +38,8 @@
 #include <type_traits>
 #include <unordered_set>
 
+#pragma GCC optimize ( "-ftree-vectorize" )
+
 namespace num
 {
 
