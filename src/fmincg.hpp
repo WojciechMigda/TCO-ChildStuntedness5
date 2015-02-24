@@ -77,6 +77,7 @@
 #include <cmath>
 #include <algorithm>
 #include <iostream>
+#include <functional>
 
 namespace num
 {
