@@ -74,7 +74,7 @@ public:
     typedef _Type value_type;
     typedef std::size_t size_type;
     typedef std::pair<size_type, size_type> shape_type;
-    typedef std::valarray<value_type> varray_type;
+    typedef std::valarray<value_type> vector_type;
 
     array2d(shape_type shape, value_type initializer);
 
@@ -89,6 +89,18 @@ public:
 
     std::gslice columns(int p, int q) const;
 
+    void mul(
+        const Axis,
+        const std::valarray<value_type> & ivector,
+        std::valarray<value_type> & ovector) const;
+
+    template<typename _Op>
+    void mul(
+        const Axis,
+        const std::valarray<value_type> & ivector,
+        std::valarray<value_type> & ovector,
+        _Op op) const;
+
     std::valarray<value_type> operator[](std::slice slicearr) const;
     std::slice_array<value_type> operator[](std::slice slicearr);
     std::valarray<value_type> operator[](const std::gslice & gslicearr) const;
@@ -96,7 +108,7 @@ public:
 
 private:
     shape_type m_shape;
-    varray_type m_varray;
+    vector_type m_varray;
 };
 
 template<typename _Type>
@@ -206,6 +218,54 @@ std::slice
 array2d<_Type>::stripe(size_type n, enum Axis axis) const
 {
     return axis == Axis::Row ? row(n) : column(n);
+}
+
+template<typename _Type>
+inline
+void
+array2d<_Type>::mul(
+    const enum Axis axis,
+    const std::valarray<_Type> & ivector,
+    std::valarray<_Type> & ovector) const
+{
+    mul(axis, ivector, ovector,
+        [](const value_type & lhs, const value_type & rhs) -> value_type
+        {
+            return rhs;
+        }
+    );
+}
+
+template<typename _Type>
+template<typename _Op>
+inline
+void
+array2d<_Type>::mul(
+    const enum Axis axis,
+    const std::valarray<_Type> & ivector,
+    std::valarray<_Type> & ovector,
+    _Op op) const
+{
+    if (axis == Axis::Column)
+    {
+        assert(ivector.size() == m_shape.first);
+        assert(ovector.size() == m_shape.second);
+
+        for (size_type r{0}; r < m_shape.second; ++r)
+        {
+            ovector[r] = op(ovector[r], (m_varray[column(r)] * ivector).sum());
+        }
+    }
+    else
+    {
+        assert(ivector.size() == m_shape.second);
+        assert(ovector.size() == m_shape.first);
+
+        for (size_type r{0}; r < m_shape.first; ++r)
+        {
+            ovector[r] = op(ovector[r], (m_varray[row(r)] * ivector).sum());
+        }
+    }
 }
 
 template<typename _Type>
