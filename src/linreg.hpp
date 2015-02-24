@@ -31,6 +31,7 @@
 #include <valarray>
 #include <utility>
 #include <cassert>
+#include <functional>
 
 namespace num
 {
@@ -63,10 +64,7 @@ linreg_cost_grad(
     vector & H = tcol;
 
     //    H = (theta' * X')' - y;
-    for (size_type r{0}; r < X_shape.first; ++r)
-    {
-        H[r] = (X[X.row(r)] * theta).sum();
-    }
+    X.mul(decltype(X)::Axis::Row, theta, H);
     H -= y;
 
     //  sigma_i = sum(H .* H);
@@ -81,10 +79,7 @@ linreg_cost_grad(
     out_grad = theta / C;
     out_grad[0] = 0.0;
     //  grad += (H)' * X;
-    for (size_type r{0}; r < X_shape.second; ++r)
-    {
-        out_grad[r] += (X[X.column(r)] * H).sum();
-    }
+    X.mul(decltype(X)::Axis::Column, H, out_grad, std::plus<value_type>());
     //  grad /= m;
     out_grad /= X_shape.first;
 }
