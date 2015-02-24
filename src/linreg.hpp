@@ -73,7 +73,8 @@ linreg_cost_grad(
     const value_type Sigma = (H * H).sum();
 
     //  J = (sigma_i + sum(theta_for_reg .* theta_for_reg) / C) / (2 * m);
-    out_cost = (Sigma + (theta[std::slice(1, X_shape.second - 1, 1)] * theta[std::slice(1, X_shape.second - 1, 1)]).sum() / C) / (2.0 * X_shape.first);
+//    out_cost = (Sigma + (theta[std::slice(1, X_shape.second - 1, 1)] * theta[std::slice(1, X_shape.second - 1, 1)]).sum() / C) / (2.0 * X_shape.first);
+    out_cost = (Sigma + ((theta * theta).sum() - theta[0] * theta[0]) / C) / (2.0 * X_shape.first);
 
     //  theta_for_reg = [0; theta(2:end)];
     //  grad = theta_for_reg' / C;
