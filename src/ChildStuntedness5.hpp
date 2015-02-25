@@ -155,7 +155,11 @@ repair_X_data(
     array_type ts_result = ts_array;
 
     std::random_device rd;
+#ifdef NO_STOCH
+    std::mt19937 g(0);
+#else
     std::mt19937 g(rd());
+#endif
 
     auto draw_element = [&g](const vector_type & vec) -> real_type
     {
@@ -688,8 +692,19 @@ ChildStuntedness5::predict(
 //    array_type complete_X_tr_data = std::move(X_tr_ts_data.first);
 //    array_type complete_X_ts_data = std::move(X_tr_ts_data.second);
 
-    const real_type C[] = {1.0, 1.0, 1.0};
-    const num::size_type NREP[3][3] = {{128, 48, 32}, {96, 32, 24}, {64, 24, 16}};
+    const real_type C[] =
+    {
+        .3,
+        1.0,
+        1.0
+    };
+    const num::size_type NREP[][3] =
+    {
+        {0, 8, 0},
+        /* test 1 */ {128, 48, 32},
+        /* test 2 */ { 96, 32, 24},
+        /* test 3 */ { 64, 24, 16}
+    };
 
     vector_type pred(X_ts_data.shape().first);
 
