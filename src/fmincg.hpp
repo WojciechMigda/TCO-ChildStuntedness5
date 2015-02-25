@@ -69,9 +69,6 @@
 #ifndef FMINCG_HPP_
 #define FMINCG_HPP_
 
-#pragma GCC optimize ( "-ffast-math" )
-#pragma GCC optimize ( "-fno-finite-math-only" )
-
 #include <utility>
 #include <valarray>
 #include <cmath>
@@ -87,7 +84,7 @@ namespace num
 template<typename _ValueType>
 std::valarray<_ValueType>
 fmincg(
-    std::function<std::pair<_ValueType, std::valarray<_ValueType>> (const std::valarray<_ValueType>)> cost_gradient_fn,
+    std::function<std::pair<_ValueType, std::valarray<_ValueType>> (const std::valarray<_ValueType> &)> cost_gradient_fn,
     std::valarray<_ValueType> theta,
     int maxiter,
     bool verbose=false
