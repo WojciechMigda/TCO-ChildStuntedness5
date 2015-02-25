@@ -51,7 +51,7 @@ linreg_cost_grad(
 )
 {
     typedef _ValueType value_type;
-    typedef std::valarray<value_type> vector;
+    typedef std::valarray<value_type> vector_type;
 
     const shape_type X_shape = X.shape();
 
@@ -61,7 +61,7 @@ linreg_cost_grad(
 
     assert(tcol.size() >= X_shape.first);
 
-    vector & H = tcol;
+    vector_type & H = tcol;
 
     //    H = (theta' * X')' - y;
     X.mul(decltype(X)::Axis::Row, theta, H);
