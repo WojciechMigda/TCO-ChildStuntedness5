@@ -251,9 +251,17 @@ array2d<_Type>::mul(
         assert(ivector.size() == m_shape.first);
         assert(ovector.size() == m_shape.second);
 
-        for (size_type r{0}; r < m_shape.second; ++r)
+//        std::valarray<_Type> temp = ovector;
+
+//        for (size_type r{0}; r < m_shape.first; ++r)
+//        {
+////            ovector = op(ovector, m_varray[row(r)] * ivector[r]);
+//            ovector += m_varray[row(r)] * ivector[r];
+//        }
+
+        for (size_type c{0}; c < m_shape.second; ++c)
         {
-            ovector[r] = op(ovector[r], (m_varray[column(r)] * ivector).sum());
+            ovector[c] = op(ovector[c], (m_varray[column(c)] * ivector).sum());
         }
     }
     else
