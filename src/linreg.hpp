@@ -44,14 +44,15 @@ linreg_cost_grad(
     std::valarray<_ValueType> & out_grad,
     std::valarray<_ValueType> & tcol,
     /// in
-    const std::valarray<_ValueType> theta,
-    const array2d<_ValueType> X,
-    const std::valarray<_ValueType> y,
+    const std::valarray<_ValueType> & theta,
+    const array2d<_ValueType> & X,
+    const std::valarray<_ValueType> & y,
     const _ValueType C
 )
 {
     typedef _ValueType value_type;
     typedef std::valarray<value_type> vector_type;
+    typedef array2d<value_type> array_type;
 
     const shape_type X_shape = X.shape();
 
@@ -64,7 +65,7 @@ linreg_cost_grad(
     vector_type & H = tcol;
 
     //    H = (theta' * X')' - y;
-    X.mul(decltype(X)::Axis::Row, theta, H);
+    X.mul(array_type::Axis::Row, theta, H);
     H -= y;
 
     //  sigma_i = sum(H .* H);
@@ -79,7 +80,7 @@ linreg_cost_grad(
     out_grad = theta / C;
     out_grad[0] = 0.0;
     //  grad += (H)' * X;
-    X.mul(decltype(X)::Axis::Column, H, out_grad, std::plus<value_type>());
+    X.mul(array_type::Axis::Column, H, out_grad, std::plus<value_type>());
     //  grad /= m;
     out_grad /= X_shape.first;
 }
@@ -163,10 +164,10 @@ LinearRegression<_ValueType>::fit(void) const
 {
     vector_type tcol(m_y.size());
 
-    std::function<std::pair<value_type, vector_type> (vector_type)>
+    std::function<std::pair<value_type, vector_type> (const vector_type &)>
 
     /* NOTE: Capturing member variables is always done via capturing this */
-    cost_fn = [this, &tcol](const vector_type theta) -> std::pair<value_type, vector_type>
+    cost_fn = [this, &tcol](const vector_type & theta) -> std::pair<value_type, vector_type>
     {
         value_type cost;
         vector_type grad(theta.size());
