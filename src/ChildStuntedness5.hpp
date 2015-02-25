@@ -45,7 +45,7 @@ enum ScenarioType
     S3
 };
 
-typedef double real_type;
+typedef long double real_type;
 
 std::map<real_type, real_type>
 map_y_density(
@@ -163,13 +163,17 @@ repair_X_data(
 
     auto draw_element = [&g](const vector_type & vec) -> real_type
     {
-        std::uniform_int_distribution<num::size_type> dist{0, vec.size()};
+        std::uniform_int_distribution<num::size_type> dist{0, vec.size() - 1};
 
         real_type drawn;
 
         do
         {
+#ifdef NO_STOCH
+            drawn = vec[rand() % vec.size()];
+#else
             drawn = vec[dist(g)];
+#endif
         } while (std::isnan(drawn));
 
         return drawn;
@@ -700,7 +704,7 @@ ChildStuntedness5::predict(
     };
     const num::size_type NREP[][3] =
     {
-        {0, 8, 0},
+        {8, 0, 0},
         /* test 1 */ {128, 48, 32},
         /* test 2 */ { 96, 32, 24},
         /* test 3 */ { 64, 24, 16}
