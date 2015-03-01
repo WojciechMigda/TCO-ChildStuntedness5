@@ -47,8 +47,244 @@ enum ScenarioType
 
 typedef long double real_type;
 
+template<typename _ValueType>
+std::valarray<std::pair<_ValueType, _ValueType>> pairwise_perm(num::size_type max)
+{
+    typedef num::size_type size_type;
+    typedef std::valarray<std::pair<_ValueType, _ValueType>> vector_type;
+
+    vector_type result(max * (max + 1) / 2);
+
+    size_type idx{0};
+    for (size_type outer{0}; outer < max; ++outer)
+    {
+        for (size_type inner{outer}; inner < max; ++inner)
+        {
+            result[idx++] = {outer, inner};
+        }
+    }
+//    for (int i =0; i < result.size(); ++i)
+//    {
+//        std::cout<< result[i] << std::endl;
+//    }
+
+    return result;
+}
+
+num::array2d<real_type>
+preprocess_features(
+    const enum ScenarioType scenario,
+    num::array2d<real_type> && in_features
+)
+{
+    if (scenario == ScenarioType::S1)
+    {
+        const num::size_type M{in_features.shape().first};
+        const num::size_type N{in_features.shape().second};
+
+        const auto pairwise = pairwise_perm<num::size_type>(N);
+
+        num::array2d<real_type> result =
+            num::zeros<real_type>({M, N + pairwise.size()});
+
+        result[result.columns(0, N - 1)] = in_features[in_features.columns(0, N - 1)];
+
+        num::size_type extra_col{N};
+        for (auto pair : pairwise)
+        {
+            result[result.column(extra_col)] =
+                (std::valarray<real_type>)in_features[in_features.column(pair.first)] * (std::valarray<real_type>)in_features[in_features.column(pair.second)];
+            ++extra_col;
+        }
+        assert(extra_col == result.shape().second);
+        in_features = result;
+    }
+    else if (scenario == ScenarioType::S2)
+    {
+        const num::size_type M{in_features.shape().first};
+        const num::size_type N{in_features.shape().second};
+
+        const std::valarray<std::pair<num::size_type, num::size_type>> pairwise =
+        { // max = 80519.7
+            {10, 10},
+            {12, 12},
+            {9, 9},
+            {9, 10},
+            {27, 27},
+            {16, 16},
+            {3, 3}, // 86959
+            {17, 17}, // 90015
+            {16, 19}, // 90246
+            {9, 29}, // 88848
+            // #10
+            {0, 9},
+            {3, 9},
+            {10, 29},
+            {23, 25},
+            {16, 18},
+            {4, 9},
+            {5, 12},
+            {27, 29}, // 89767
+            {27, 28},
+            {1, 29},
+            // #20
+            {8, 27}, // 88367
+            {23, 24},
+            {0, 3},
+            {16, 17},
+            {14, 29},
+            {7, 19},
+            {12, 17},
+            {24, 25},
+            {5, 24},
+            {28, 29} // 89077
+            // #30
+        };
+
+        num::array2d<real_type> result =
+            num::zeros<real_type>({M, N + pairwise.size()});
+
+        result[result.columns(0, N - 1)] = in_features[in_features.columns(0, N - 1)];
+
+//        const auto pairwise = pairwise_perm<real_type>(N);
+
+        num::size_type extra_col{N};
+        for (auto pair : pairwise)
+        {
+            result[result.column(extra_col)] =
+                (std::valarray<real_type>)in_features[in_features.column(pair.first)] * (std::valarray<real_type>)in_features[in_features.column(pair.second)];
+            ++extra_col;
+        }
+        assert(extra_col == result.shape().second);
+        in_features = result;
+//        enum col
+//        {
+//            wtkg_1,
+//            lencm_1,
+//            bmi_1,
+//            waz_1,
+//            haz_1,
+//            whz_1,
+//            baz_1,
+//            sexn_1,
+//            gagebrth_1,
+//            apgar1_1,
+//            apgar5_1,
+//            wtkg_2,
+//            waz_2,
+//            wtkg_3,
+//            lencm_3,
+//            bmi_3,
+//            waz_3,
+//            haz_3,
+//            whz_3,
+//            baz_3,
+//            wtkg_4,
+//            htcm_4,
+//            bmi_4,
+//            waz_4,
+//            haz_4,
+//            whz_4,
+//            baz_4,
+//            wtkg_5,
+//            htcm_5,
+//            bmi_5,
+//        };
+    }
+    else if (scenario == ScenarioType::S3)
+    {
+        const num::size_type M{in_features.shape().first};
+        const num::size_type N{in_features.shape().second};
+
+        const std::valarray<std::pair<num::size_type, num::size_type>> pairwise =
+        { // max = 338943
+            {19, 19},
+            {19, 20},
+            {7, 20},
+            {15, 20},
+            {22, 22},
+            {20, 20}, // 336768
+            {14, 19},
+            {14, 17}, // 336480
+            {7, 14}, // 338277
+            {14, 20}, // 337829
+            // #10
+            {26, 26},
+            {14, 18},
+            {17, 19},
+            {7, 8},
+            {16, 20},
+            {9, 22}, // 335457
+            {15, 19},
+            {7, 17},
+            {3, 3},
+            {18, 19},
+            // #20
+            {37, 37},
+            {9, 16},
+            {16, 16},
+            {17, 20},
+            {7, 15},
+            {7, 18},
+            {9, 14},
+            {14, 38},
+            {6, 20},
+            {15, 16},
+            // #30
+            {27, 27},
+            {4, 15},
+            {1, 38},
+            {7, 19},
+            {11, 16},
+            {11, 13},
+            {15, 22},
+            {7, 34},
+            {16,22},
+            {5,7},
+        };
+
+        num::array2d<real_type> result =
+            num::zeros<real_type>({M, N + pairwise.size()});
+
+        result[result.columns(0, N - 1)] = in_features[in_features.columns(0, N - 1)];
+
+//        const auto pairwise = pairwise_perm<real_type>(N);
+
+        num::size_type extra_col{N};
+        for (auto pair : pairwise)
+        {
+            result[result.column(extra_col)] =
+                (std::valarray<real_type>)in_features[in_features.column(pair.first)] * (std::valarray<real_type>)in_features[in_features.column(pair.second)];
+            ++extra_col;
+        }
+        assert(extra_col == result.shape().second);
+        in_features = result;
+//        const num::size_type M{in_features.shape().first};
+//        const num::size_type N{in_features.shape().second};
+//
+//        const auto pairwise = pairwise_perm<real_type>(N);
+//
+//        num::array2d<real_type> result =
+//            num::zeros<real_type>({M, N + pairwise.size()});
+//
+//        result[result.columns(0, N - 1)] = in_features[in_features.columns(0, N - 1)];
+//
+//        num::size_type extra_col{N};
+//        for (auto pair : pairwise)
+//        {
+//            result[result.column(extra_col)] =
+//                (std::valarray<real_type>)in_features[in_features.column(pair.first)] * (std::valarray<real_type>)in_features[in_features.column(pair.second)];
+//            ++extra_col;
+//        }
+//        assert(extra_col == result.shape().second);
+//        in_features = result;
+    }
+
+    return in_features;
+}
+
 std::map<real_type, real_type>
-map_y_density(
+map_feature_y_density(
     const std::valarray<real_type> & feat,
     const std::valarray<real_type> & y
 )
@@ -128,6 +364,7 @@ std::valarray<real_type> do_lin_reg(
     );
 
     auto fit_theta = linRegClassifier.fit();
+//    std::copy(std::begin(fit_theta), std::end(fit_theta), std::ostream_iterator<real_type>(std::cout, "\n"));
 
     auto pred = linRegClassifier.predict(X_test, fit_theta);
 
@@ -139,6 +376,108 @@ std::valarray<real_type> do_lin_reg(
 
     return pred;
 }
+
+std::pair<num::array2d<real_type>, num::array2d<real_type>>
+remap_X_data(
+    const enum ScenarioType scenario,
+    const num::array2d<real_type> & i_X_train,
+    const num::array2d<real_type> & i_X_test,
+    const std::valarray<real_type> & i_y_train
+)
+{
+    assert(i_X_train.shape().second == i_X_test.shape().second);
+
+    typedef std::valarray<real_type> vector_type;
+    typedef num::array2d<real_type> array_type;
+
+    array_type X_train = i_X_train;
+    array_type X_test = i_X_test;
+
+    std::initializer_list<int> col_selector;
+    if (scenario == ScenarioType::S3)
+    {
+        col_selector =
+        {
+            7, //siteid
+            9, //feedingn
+            11, //apgar1
+            12, //apgar5
+            13, //mage
+//            14, //demo1n #2
+            15, //mmaritn
+            16, //mcignum
+            17, //parity
+            18, //gravida
+            19, //meducyrs
+            20, //demo2n
+        };
+    }
+    else if (scenario == ScenarioType::S2)
+    {
+        col_selector =
+        {
+            9, //apgar1
+            10, //apgar5
+        };
+    }
+    else if (scenario == ScenarioType::S1)
+    {
+        col_selector =
+        {
+            4, //apgar1
+            5, //apgar5
+        };
+    }
+
+    for (auto COLUMN : col_selector)
+    {
+        auto event_density = map_feature_y_density(X_train[X_train.column(COLUMN)], i_y_train);
+        std::cerr << "feature density size: " << event_density.size() << std::endl;
+
+        vector_type mapped_train_col = X_train[X_train.column(COLUMN)];
+        std::transform(std::begin(mapped_train_col), std::end(mapped_train_col), std::begin(mapped_train_col),
+            [&event_density](const real_type & x) -> real_type
+            {
+                if (event_density.find(x) != event_density.cend())
+                {
+                    return event_density[x];
+                }
+                else if (event_density.upper_bound(x) != event_density.cend())
+                {
+                    return event_density.upper_bound(x)->second;
+                }
+                else
+                {
+                    return event_density.cbegin()->second;
+                }
+            }
+        );
+        X_train[X_train.column(COLUMN)] = mapped_train_col;
+
+        vector_type mapped_test_col = X_test[X_test.column(COLUMN)];
+        std::transform(std::begin(mapped_test_col), std::end(mapped_test_col), std::begin(mapped_test_col),
+            [&event_density](const real_type & x) -> real_type
+            {
+                if (event_density.find(x) != event_density.cend())
+                {
+                    return event_density[x];
+                }
+                else if (event_density.upper_bound(x) != event_density.cend())
+                {
+                    return event_density.upper_bound(x)->second;
+                }
+                else
+                {
+                    return event_density.cbegin()->second;
+                }
+            }
+        );
+        X_test[X_test.column(COLUMN)] = mapped_test_col;
+    }
+
+    return std::make_pair(X_train, X_test);
+}
+
 
 std::pair<num::array2d<real_type>, num::array2d<real_type>>
 repair_X_data(
@@ -250,7 +589,8 @@ flatten_X_data(
     const std::valarray<num::size_type> s3_selector[] =
     {
         // these are column indices among those already selected from the full set
-        {2, 4, 5, 6, 7, 8, 9, 10, 11, 12, 13, 16, 17, 18, 19, 20, 21, 22, 23, 24, 25}, // age: 1
+        //                   site sex feed gage    apgar1,5
+        {2, 4, 5, 6, 7, 8, 9, 10, 11, 12, 13, /**/ 16, 17, /**/ 18, 19, 20, 21, 22, 23, 24, 25}, // age: 1
         {2, 6}, // age: 123
         {2, 4, 5, 6, 7, 8, 9}, // age: 366
         {2, 3, 5, 6, 7, 8, 9}, // age: 1462
@@ -698,14 +1038,15 @@ ChildStuntedness5::predict(
 
     const real_type C[] =
     {
+        0.5,
         .3,
-        1.0,
-        1.0
+        .3
     };
     const num::size_type NREP[][3] =
     {
-        {8, 0, 0},
-        /* test 1 */ {128, 48, 32},
+//        {0, 0, 8},
+//        /* test 1 */ {128, 48, 32},
+        /* test 1 */ { 96, 32, 24},
         /* test 2 */ { 96, 32, 24},
         /* test 3 */ { 64, 24, 16}
     };
@@ -717,6 +1058,13 @@ ChildStuntedness5::predict(
         auto X_tr_ts_data = repair_X_data(X_tr_data, X_ts_data);
         array_type complete_X_tr_data = std::move(X_tr_ts_data.first);
         array_type complete_X_ts_data = std::move(X_tr_ts_data.second);
+
+        X_tr_ts_data = remap_X_data(enumerated_scenario, complete_X_tr_data, complete_X_ts_data, y_tr_data);
+        complete_X_tr_data = std::move(X_tr_ts_data.first);
+        complete_X_ts_data = std::move(X_tr_ts_data.second);
+
+        complete_X_tr_data = preprocess_features(enumerated_scenario, std::move(complete_X_tr_data));
+        complete_X_ts_data = preprocess_features(enumerated_scenario, std::move(complete_X_ts_data));
 
         pred += do_lin_reg(
             C[scenario],
